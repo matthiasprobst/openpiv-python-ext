@@ -5,13 +5,16 @@ Created on Fri Oct  4 14:33:21 2019
 """
 
 import pathlib
+
 import numpy as np
+
 from openpiv import windef
 from openpiv.test import test_process
 
 frame_a, frame_b = test_process.create_pair(image_size=256)
 shift_u, shift_v, threshold = test_process.shift_u, test_process.shift_v, \
                               test_process.threshold
+
 
 # this test are created only to test the displacement evaluation of the
 # function the validation methods are not tested here ant therefore
@@ -67,14 +70,14 @@ def test_multi_pass_circ():
     )
     print("first pass\n")
     print("\n", x, y, u, v, s2n)
-    assert np.allclose(u, shift_u, atol = threshold)
-    assert np.allclose(v, shift_v, atol = threshold)
+    assert np.allclose(u, shift_u, atol=threshold)
+    assert np.allclose(v, shift_v, atol=threshold)
 
     u = np.ma.masked_array(u, mask=np.ma.nomask)
     v = np.ma.masked_array(v, mask=np.ma.nomask)
 
-    for i in range(1,settings.num_iterations):
-        x, y, u, v, s2n, _ = windef.multipass_img_deform(
+    for i in range(1, settings.num_iterations):
+        x, y, u, v, grid_mask, flags, s2n = windef.multipass_img_deform(
             frame_a,
             frame_b,
             i,
@@ -88,7 +91,7 @@ def test_multi_pass_circ():
     print(f"Pass {i}\n")
     print(x)
     print(y)
-    print(u) 
+    print(u)
     print(v)
     print(s2n)
     assert np.mean(np.abs(u - shift_u)) < threshold
@@ -129,7 +132,7 @@ def test_save_plot():
     windef.piv(settings)
 
     save_path_string = \
-        f"OpenPIV_results_{settings.windowsizes[settings.num_iterations-1]}_{settings.save_folder_suffix}"
+        f"OpenPIV_results_{settings.windowsizes[settings.num_iterations - 1]}_{settings.save_folder_suffix}"
     save_path = \
         settings.save_path / save_path_string
 
@@ -176,7 +179,7 @@ def test_multi_pass_lin():
     settings.sig2noise_validate = True
     settings.correlation_method = 'linear'
     settings.normalized_correlation = True
-    settings.sig2noise_threshold = 1.0 # note the value for linear/normalized
+    settings.sig2noise_threshold = 1.0  # note the value for linear/normalized
 
     x, y, u, v, s2n = windef.first_pass(
         frame_a,
@@ -187,7 +190,6 @@ def test_multi_pass_lin():
     print("\n", x, y, u, v, s2n)
     assert np.mean(np.abs(u - shift_u)) < threshold
     assert np.mean(np.abs(v - shift_v)) < threshold
-
 
     mask_coords = []
     u = np.ma.masked_array(u, mask=np.ma.nomask)
@@ -212,18 +214,19 @@ def test_multi_pass_lin():
     # the second condition is to check if the multipass is done.
     # It need's a little numerical inaccuracy.
 
+
 def test_simple_multipass():
     """ Test simple multipass """
     settings = windef.PIVSettings()
-    settings.windowsizes = (64,)
-    settings.overlap = (32,)
-    settings.num_iterations = 1
+    settings.windowsizes = (64, 32)
+    settings.overlap = (32, 16)
+    settings.num_iterations = 2
     settings.correlation_method = 'circular'
     settings.sig2noise_method = 'peak2peak'
     settings.subpixel_method = 'gaussian'
     settings.sig2noise_mask = 2
 
-    x, y, u, v, mask = windef.simple_multipass(
+    x, y, u, v, mask, s2n = windef.simple_multipass(
         frame_a,
         frame_b,
         settings,
@@ -235,7 +238,8 @@ def test_simple_multipass():
     # print(shift_u)
     # print(shift_v)
 
-#     # note the -shift_v 
+
+#     # note the -shift_v
 #     # the simple_multipass also transforms units, so 
 #     # the plot is in the image-like space
 
@@ -266,14 +270,12 @@ def test_simple_rectangular_window():
 
     settings = windef.PIVSettings()
 
-
-    x, y, _,_,_ = windef.simple_multipass(
+    x, y, _, _, _, _ = windef.simple_multipass(
         frame_a,
         frame_b,
         settings,
     )
-    
-        
+
     settings.windowsizes = ((64, 32),)
     settings.overlap = ((32, 16),)
     settings.num_iterations = 1
@@ -282,7 +284,7 @@ def test_simple_rectangular_window():
     settings.subpixel_method = 'gaussian'
     settings.sig2noise_mask = 2
 
-    x, y, _,_,_ = windef.simple_multipass(
+    x, y, _, _, _, _ = windef.simple_multipass(
         frame_a,
         frame_b,
         settings,
@@ -291,21 +293,20 @@ def test_simple_rectangular_window():
     # print(x,y,u,v,mask)
     # print(np.diff(x[0,:2]))
     # print( np.diff(y[:2,0]))
-    assert np.diff(x[0,:2]) == 16
-    assert np.diff(y[:2,0]) == -32
+    assert np.diff(x[0, :2]) == 16
+    assert np.diff(y[:2, 0]) == -32
 
-
-    settings.windowsizes = ((32, 64),(16, 32))
+    settings.windowsizes = ((32, 64), (16, 32))
     settings.overlap = ((16, 32), (8, 16))
     settings.num_iterations = 2
 
-    x, y, _, _, _ = windef.simple_multipass(
+    x, y, _, _, _, _ = windef.simple_multipass(
         frame_a,
         frame_b,
         settings,
     )
-    assert np.diff(x[0,:2]) == 16
-    assert np.diff(y[:2,0]) == -8
+    assert np.diff(x[0, :2]) == 16
+    assert np.diff(y[:2, 0]) == -8
 
     settings.show_all_plots = False
     settings.show_plot = True

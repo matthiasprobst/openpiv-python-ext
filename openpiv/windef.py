@@ -385,7 +385,7 @@ def piv(settings):
             # if not isinstance(u, np.ma.MaskedArray):
             #     raise ValueError("Expected masked array")
 
-            x, y, u, v, grid_mask, flags = multipass_img_deform(
+            x, y, u, v, grid_mask, flags, snr = multipass_img_deform(
                 frame_a,
                 frame_b,
                 i,
@@ -457,7 +457,7 @@ def piv(settings):
         x, y, u, v = scaling.uniform(x, y, u, v,
                                      scaling_factor=settings.scaling_factor)
 
-        # before saving we conver to the "physically relevant"
+        # before saving we convert to the "physically relevant"
         # right-hand coordinate system with 0,0 at the bottom left
         # x to the right, y upwards
         # and so u,v
@@ -969,7 +969,7 @@ def multipass_img_deform(
         plt.title(' after replaced outliers, red, invert')
         plt.show()
 
-    return x, y, u, v, grid_mask, flags
+    return x, y, u, v, grid_mask, flags, s2n
 
 def simple_multipass(
     frame_a: np.ndarray,
@@ -1008,7 +1008,7 @@ def simple_multipass(
     # multipass 
     for i in range(1, settings.num_iterations):
 
-        x, y, u, v, grid_mask, flags = multipass_img_deform(
+        x, y, u, v, grid_mask, flags, s2n = multipass_img_deform(
             frame_a,
             frame_b,
             i,
@@ -1025,7 +1025,7 @@ def simple_multipass(
 
     # note the use of .data for masked arrays
     x, y, u, v = transform_coordinates(x, y, u.data, v.data) 
-    return (x, y, u, v, flags)
+    return x, y, u, v, flags, s2n  # s2n is the one of the last iteration
 
 
 
