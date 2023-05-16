@@ -121,7 +121,7 @@ def replace_outliers(
        are equal to 1/( (2*kernel_size+1)**2 -1 )
 
     2) Several iterations are needed if there are adjacent invalid elements.
-       If this is the case, inforation is "spread" from the edges of the
+       If this is the case, information is "spread" from the edges of the
        missing regions iteratively, until the variation is below a certain
        threshold.
 
@@ -134,21 +134,22 @@ def replace_outliers(
     v : 2d or 3d  np.ndarray
         the v velocity component field
 
+    flags : 2d array of positions with invalid vectors
+
     w : 2d or 3d  np.ndarray
         the w velocity component field
 
-    flags : 2d array of positions with invalid vectors
-
-    grid_mask : 2d array of positions masked by the user
+    method : str
+        the type of kernel used for repairing missing vectors
 
     max_iter : int
         the number of iterations
 
+    tol : float
+        see np.replace_nans
+
     kernel_size : int
         the size of the kernel, default is 1
-
-    method : str
-        the type of kernel used for repairing missing vectors
 
     Returns
     -------
@@ -186,7 +187,6 @@ def replace_outliers(
         v, method=method, max_iter=max_iter, tol=tol,
         kernel_size=kernel_size
     )
-
  
     uf = np.ma.masked_array(uf, mask=grid_mask)
     vf = np.ma.masked_array(vf, mask=grid_mask)
