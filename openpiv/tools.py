@@ -18,45 +18,49 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys
-import pathlib
 import multiprocessing
-from typing import Any, Union, List, Optional
-# import re
+import pathlib
+import sys
+from typing import Any, Union, List, Optional, Dict
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as pt
-from natsort import natsorted
-
+import matplotlib.pyplot as plt
+import numpy as np
 # from builtins import range
 from imageio.v3 import imread as _imread, imwrite as _imsave
+from natsort import natsorted
 from skimage.feature import canny
 
+DEFAULT_DELIMITER = '\t'
 
-def natural_sort(file_list: List[pathlib.Path])-> List[pathlib.Path]:
+
+# import re
+
+
+def natural_sort(file_list: List[pathlib.Path]) -> List[pathlib.Path]:
     """ Creates naturally sorted list """
     # convert = lambda text: int(text) if text.isdigit() else text.lower()
     # alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     # return sorted(file_list, key=alphanum_key)
     return natsorted(file_list, key=str)
 
-def sorted_unique(array: np.ndarray)->np.ndarray:
+
+def sorted_unique(array: np.ndarray) -> np.ndarray:
     """Creates sorted unique array """
     uniq, index = np.unique(array, return_index=True)
     return uniq[index.argsort()]
 
 
 def display_vector_field(
-    filename: Union[pathlib.Path, str],
-    on_img: Optional[bool]=False,
-    image_name: Optional[Union[pathlib.Path,str]]=None,
-    window_size: Optional[int]=32,
-    scaling_factor: Optional[float]=1.,
-    ax: Optional[Any]=None,
-    width: Optional[float]=0.0025,
-    show_invalid: Optional[bool]=True,
-    **kw
+        filename: Union[pathlib.Path, str],
+        on_img: Optional[bool] = False,
+        image_name: Optional[Union[pathlib.Path, str]] = None,
+        window_size: Optional[int] = 32,
+        scaling_factor: Optional[float] = 1.,
+        ax: Optional[Any] = None,
+        width: Optional[float] = 0.0025,
+        show_invalid: Optional[bool] = True,
+        **kw
 ):
     """ Displays quiver plot of the data stored in the file 
     
@@ -109,10 +113,14 @@ def display_vector_field(
     """
 
     # print(f' Loading {filename} which exists {filename.exists()}')
-    a = np.loadtxt(filename)
-    # parse
-    x, y, u, v, flags, mask = a[:, 0], a[:, 1], a[:, 2], a[:, 3], a[:, 4], a[:, 5]
+    data_dict = load(filename)
 
+    x = data_dict['x']
+    y = data_dict['y']
+    u = data_dict['u']
+    v = data_dict['v']
+    flags = data_dict.get('flags', np.zeros_like(u))
+    mask = data_dict.get('mask', np.zeros_like(u)).astype(bool)
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -124,15 +132,14 @@ def display_vector_field(
         im = negative(im)  # plot negative of the image for more clarity
         xmax = np.amax(x) + window_size / (2 * scaling_factor)
         ymax = np.amax(y) + window_size / (2 * scaling_factor)
-        ax.imshow(im, cmap="Greys_r", extent=[0.0, xmax, 0.0, ymax])    
-
+        ax.imshow(im, cmap="Greys_r", extent=[0.0, xmax, 0.0, ymax])
 
     # first mask whatever has to be masked
     u[mask.astype(bool)] = 0.
     v[mask.astype(bool)] = 0.
-    
+
     # now mark the valid/invalid vectors
-    invalid = flags > 0 # mask.astype("bool")  
+    invalid = flags > 0  # mask.astype("bool")
     valid = ~invalid
 
     # visual conversion for the data on image
@@ -150,23 +157,22 @@ def display_vector_field(
         color="b",
         width=width,
         **kw
-        )
-        
+    )
+
     if show_invalid and len(invalid) > 0:
         ax.quiver(
-                x[invalid],
-                y[invalid],
-                u[invalid],
-                v[invalid],
-                color="r",
-                width=width,
-                **kw,
-                )
-    
-    
+            x[invalid],
+            y[invalid],
+            u[invalid],
+            v[invalid],
+            color="r",
+            width=width,
+            **kw,
+        )
+
     # if on_img is False:
     #     ax.invert_yaxis()
-    
+
     ax.set_aspect(1.)
     # fig.canvas.set_window_title('Vector field, '+str(np.count_nonzero(invalid))+' wrong vectors')
 
@@ -208,7 +214,7 @@ def imread(filename, flatten=0):
     return im
 
 
-def rgb2gray(rgb: np.ndarray)->np.ndarray:
+def rgb2gray(rgb: np.ndarray) -> np.ndarray:
     """converts rgb image to gray 
 
     Args:
@@ -273,10 +279,10 @@ def convert_16bits_tif(filename, save_name):
 
 
 def mark_background(
-    threshold: float,
-    list_img: list,
-    filename: str
-    )->np.ndarray:
+        threshold: float,
+        list_img: list,
+        filename: str
+) -> np.ndarray:
     """marks background
 
     Args:
@@ -364,10 +370,10 @@ def find_boundaries(threshold, list_img1, list_img2, filename, picname):
             if mark1[I, J] == 0:
                 list_bound[I, J] = 125
             if (
-                I > 1
-                and J > 1
-                and I < list_bound.shape[0] - 2
-                and J < list_bound.shape[1] - 2
+                    I > 1
+                    and J > 1
+                    and I < list_bound.shape[0] - 2
+                    and J < list_bound.shape[1] - 2
             ):
                 for K in range(5):
                     for L in range(5):
@@ -383,16 +389,13 @@ def find_boundaries(threshold, list_img1, list_img2, filename, picname):
 
 
 def save(
-    filename: Union[pathlib.Path,str],
-    x: np.ndarray,
-    y: np.ndarray,
-    u: np.ndarray,
-    v: np.ndarray, 
-    flags: Optional[np.ndarray] = None,
-    mask: Optional[np.ndarray] = None,
-    fmt: str="%.4e",
-    delimiter: str="\t",
-    )-> None:
+        filename: Union[pathlib.Path, str],
+        x: np.ndarray,
+        y: np.ndarray,
+        u: np.ndarray,
+        v: np.ndarray,
+        **kwargs
+) -> pathlib.Path:
     """Save flow field to an ascii file.
 
     Parameters
@@ -416,21 +419,16 @@ def save(
         a two dimensional array containing the v velocity components,
         in pixels/seconds.
 
-    flags : 2d np.ndarray
-        a two dimensional integers array where elements corresponding to
-        vectors: 0 - valid, 1 - invalid (, 2 - interpolated)
-        default: None, will create all valid 0
+    kwargs: dict
+        additional data and options for file writing.
+        dictionary entries can be 'fmt' and 'delimiter' which is used for numpy.savetxt
+        other entries are treated as PIV fields and must be 2d arrays of the same shape
+        as the base data (x, y, u, v).
 
-    mask: 2d np.ndarray boolean, marks the image masked regions (dynamic and/or static)
-        default: None - will be all False
-
-
-    fmt : string
-        a format string. See documentation of numpy.savetxt
-        for more details.
-
-    delimiter : string
-        character separating columns
+    Returns
+    -------
+    filename: pathlib.Path
+        the path of the file where to save the flow field
 
     Examples
     --------
@@ -439,18 +437,26 @@ def save(
                         delimiter='\t')
 
     """
+
+    base_shape = x.shape
+
+    fmt: str = kwargs.pop('fmt', "%.4e")
+    delimiter: str = kwargs.pop('delimiter', DEFAULT_DELIMITER)
+
+    additional_fields = {k: v for k, v in kwargs.items() if v is not None}
+
+    for name, da in additional_fields.items():
+        if da.shape != base_shape:
+            raise ValueError(f"Shape of data array {name} is not equal to base shape {base_shape}")
+
     if isinstance(u, np.ma.MaskedArray):
         u = u.filled(0.)
         v = v.filled(0.)
 
-    if mask is None:
-        mask = np.zeros_like(u, dtype=int)
-
-    if flags is None:
-        flags = np.zeros_like(u, dtype=int)
-
     # build output array
-    out = np.vstack([m.flatten() for m in [x, y, u, v, flags, mask]])
+    out = np.vstack([m.flatten() for m in [x, y, u, v, *additional_fields.values()]])
+
+    header = f'{delimiter}'.join(['x', 'y', 'u', 'v', *additional_fields.keys()])
 
     # save data to file.
     np.savetxt(
@@ -458,18 +464,53 @@ def save(
         out.T,
         fmt=fmt,
         delimiter=delimiter,
-        header="x"
-        + delimiter
-        + "y"
-        + delimiter
-        + "u"
-        + delimiter
-        + "v"
-        + delimiter
-        + "flags"
-        + delimiter
-        + "mask",
+        header=header,
     )
+    return pathlib.Path(filename)
+
+
+def load(filename: Union[str, pathlib.Path], delimiter=DEFAULT_DELIMITER) -> Dict:
+    """load from txt file
+
+    Parameters
+    ----------
+    filename : Union[str, pathlib.Path]
+        path to the file to load
+    delimiter : str
+        delimiter used in the file, default is '\t'
+
+    Returns
+    -------
+    data_dict : dict
+        Dictionary containing x, y, u, v and other data fields
+    """
+    with open(filename) as f:
+        first_line = f.readline()
+    data_field_names = first_line.strip('#').strip().split(delimiter)
+
+    assert 'x' in data_field_names
+    assert 'y' in data_field_names
+    assert 'u' in data_field_names
+    assert 'v' in data_field_names
+
+    a = np.loadtxt(filename, delimiter=delimiter)
+    data_dict = {k: v for k, v in zip(data_field_names, a.T)}
+
+    if 'mask' in data_dict:
+        mask = data_dict['mask']
+    else:
+        mask = np.zeros_like(data_dict['x']).astype(bool)
+
+    # first mask whatever has to be masked
+    data_dict['u'][mask.astype(bool)] = 0.
+    data_dict['v'][mask.astype(bool)] = 0.
+
+    if 'flags' in data_dict:
+        invalid = data_dict['flags'] > 0
+        valid = ~invalid
+        data_dict['valid'] = valid
+
+    return data_dict
 
 
 def display(message):
@@ -488,10 +529,10 @@ def display(message):
 
 class Multiprocesser:
     def __init__(self,
-    data_dir: pathlib.Path,
-    pattern_a: str,
-    pattern_b: Optional[str]=None,
-    )->None:
+                 data_dir: pathlib.Path,
+                 pattern_a: str,
+                 pattern_b: Optional[str] = None,
+                 ) -> None:
         """A class to handle and process large sets of images.
 
         This class is responsible of loading image datasets
@@ -544,7 +585,7 @@ class Multiprocesser:
         # print(f'data_dir = {data_dir}')
         # print(f'pattern_a = {pattern_a}')
         # print(f' dir exists: {data_dir.exists()}')
-        
+
         self.files_a = natural_sort(list(data_dir.glob(pattern_a)))
 
         # print(f'List of files:')
@@ -569,7 +610,7 @@ class Multiprocesser:
         if not len(self.files_a) == len(self.files_b):
             print(self.files_a)
             print(self.files_b)
-            
+
             raise ValueError(
                 'Something failed loading the image file. There should be an equal number of "a" and "b" files.'
             )
@@ -736,4 +777,3 @@ def transform_coordinates(x, y, u, v):
     y = y[::-1, :]
     v *= -1
     return x, y, u, v
-        
