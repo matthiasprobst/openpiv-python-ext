@@ -250,7 +250,7 @@ def prepare_images(
     return (frame_a, frame_b, image_mask)
 
 
-def piv(settings):
+def piv(settings, n: int=-1):
     """ the func fuction is the "frame" in which the PIV evaluation is done """
 
     # note that settings is in the outer scope of piv()
@@ -501,6 +501,7 @@ def piv(settings):
         data_dir=settings.filepath_images,
         pattern_a=settings.frame_pattern_a,
         pattern_b=settings.frame_pattern_b,
+        n=n
     )
     task.run(func=func, n_cpus=1)
 

@@ -532,6 +532,7 @@ class Multiprocesser:
                  data_dir: pathlib.Path,
                  pattern_a: str,
                  pattern_b: Optional[str] = None,
+                 n: int = -1
                  ) -> None:
         """A class to handle and process large sets of images.
 
@@ -572,7 +573,9 @@ class Multiprocesser:
                 pattern_a = '000*.tif'
                 pattern_b = '(1+2),(3+4)'
                 will create PIV of these pairs: 0001.tif+0002.tif, 0003.tif+0004.tif ...           
-          
+
+        n : int
+            number of pairs to process. Default is -1, which means all pairs.
 
         Examples
         --------
@@ -602,6 +605,14 @@ class Multiprocesser:
             self.files_a = self.files_a[0::2]
         else:
             self.files_b = sorted(data_dir.glob(pattern_b))
+
+        if n != -1:
+            # n must be multiple of 2:
+            if n % 2 != 0:
+                raise ValueError('n must not be odd!')
+
+            self.files_a = self.files_a[:n]
+            self.files_b = self.files_b[:n]
 
         # number of images
         self.n_files = len(self.files_a)
