@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import multiprocessing
 import pathlib
 import sys
+import time
 from typing import Any, Union, List, Optional, Dict
 
 import matplotlib.patches as pt
@@ -696,12 +697,17 @@ class Multiprocesser:
                                                                    file_b_chunk,)
                                                              )
                                             )
+                t0 = time.time()
+                print(f'Running ...')
                 _ = [res.get() for res in multiple_results]
+                elapsed_time = time.time() - t0
+                print(f'Finished multiprocessing in {elapsed_time} seconds '
+                      f'({elapsed_time / n_image_pairs} per image pair).')
 
         else:
             for counter, file_a, file_b in tqdm.tqdm(zip(image_indices, self.files_a, self.files_b),
                                                      total=self.n_files, unit='image pairs'):
-                func(settings, counter, file_a, file_b, verbose=False)
+                func(settings, counter, file_a, file_b, verbose=False, pbar=False)
 
 
 def negative(image):

@@ -12,6 +12,7 @@ from typing import Optional, Tuple, Union, List
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as scn
+import tqdm
 from importlib_resources import files
 from scipy.interpolate import RectBivariateSpline
 from skimage.util import invert
@@ -250,7 +251,8 @@ def piv_processing(settings,
                    counter: Union[int, List[int]],
                    file_a: [Union[pathlib.Path, List[pathlib.Path]]],
                    file_b: [Union[pathlib.Path, List[pathlib.Path]]],
-                   verbose: bool = False):
+                   verbose: bool = False,
+                   pbar: bool = True):
     """A function to process one or multiple image pairs."""
 
     # this line is REQUIRED for multiprocessing to work
@@ -261,7 +263,12 @@ def piv_processing(settings,
         file_a = [file_a]
         file_b = [file_b]
 
-    for c, fa, fb in zip(counter, file_a, file_b):
+    if pbar:
+        iterator = tqdm.tqdm(zip(counter, file_a, file_b), total=len(counter))
+    else:
+        iterator = zip(counter, file_a, file_b)
+
+    for c, fa, fb in iterator:
         # print(f'Inside func {file_a}, {file_b}, {counter}')
 
         # frame_a, frame_b are masked as black where we do not
