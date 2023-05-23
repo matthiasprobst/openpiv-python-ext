@@ -27,6 +27,7 @@ import matplotlib.patches as pt
 import matplotlib.pyplot as plt
 import numpy as np
 # from builtins import range
+import tqdm
 from imageio.v3 import imread as _imread, imwrite as _imsave
 from natsort import natsorted
 from skimage.feature import canny
@@ -631,7 +632,7 @@ class Multiprocesser:
                 "Something failed loading the image file. No images were found. Please check directory and image template name."
             )
 
-    def run(self, func, n_cpus=1):
+    def run(self, func, settings: "PIVSettings", n_cpus: int = 1):
         """Start to process images.
         
         Parameters
@@ -639,6 +640,9 @@ class Multiprocesser:
         
         func : python function which will be executed for each 
             image pair. See tutorial for more details.
+
+        settings: "PIVSettings"
+            OpenPIV settings
         
         n_cpus : int
             the number of processes to launch in parallel.
@@ -656,12 +660,48 @@ class Multiprocesser:
 
         # for debugging purposes always use n_cpus = 1,
         # since it is difficult to debug multiprocessing stuff.
+        n_image_pairs = len(image_pairs)
+        image_indices = list(range(n_image_pairs))
+
         if n_cpus > 1:
-            pool = multiprocessing.Pool(processes=n_cpus)
-            res = pool.map(func, image_pairs)
+            # pool = multiprocessing.Pool(processes=n_cpus)
+            # res = pool.map(func, image_pairs)
+
+            n_cpus = min(n_cpus, multiprocessing.cpu_count(), n_image_pairs)
+            chunk_size = int(np.ceil(n_image_pairs / n_cpus))
+
+            file_a_chunks = []
+            image_index_chunk = []
+            for i in range(n_cpus):
+                image_index_chunk.append(image_indices[i * chunk_size:chunk_size * (i + 1)])
+                file_a_chunks.append(self.files_a[i * chunk_size:chunk_size * (i + 1)])
+
+            file_b_chunks = []
+            for i in range(n_cpus):
+                file_b_chunks.append(self.files_b[i * chunk_size:chunk_size * (i + 1)])
+
+            print(f'Number of cpus: {n_cpus}')
+            print(f'N image pairs: {n_image_pairs}')
+            print(f'Chunk size: {chunk_size}')
+
+            with multiprocessing.Pool(processes=n_cpus) as pool:
+                multiple_results = []
+                for image_indices_chunk, file_a_chunk, file_b_chunk in zip(image_index_chunk,
+                                                                           file_a_chunks,
+                                                                           file_b_chunks):
+                    multiple_results.append(pool.apply_async(func,
+                                                             args=(settings,
+                                                                   image_indices_chunk,
+                                                                   file_a_chunk,
+                                                                   file_b_chunk,)
+                                                             )
+                                            )
+                _ = [res.get() for res in multiple_results]
+
         else:
-            for image_pair in image_pairs:
-                func(image_pair)
+            for counter, file_a, file_b in tqdm.tqdm(zip(image_indices, self.files_a, self.files_b),
+                                                     total=self.n_files, unit='image pairs'):
+                func(settings, counter, file_a, file_b, verbose=False)
 
 
 def negative(image):
