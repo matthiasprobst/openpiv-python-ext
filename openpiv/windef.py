@@ -5,23 +5,38 @@ Created on Fri Oct  4 14:04:04 2019
 @modified: Alex, Erich
 """
 
-import pathlib
-from dataclasses import dataclass
-from typing import Optional, Tuple, Union, List
-
 import matplotlib.pyplot as plt
 import numpy as np
+import pathlib
 import scipy.ndimage as scn
 import tqdm
+from dataclasses import dataclass
 from importlib_resources import files
 from scipy.interpolate import RectBivariateSpline
 from skimage.util import invert
+from typing import Optional, Tuple, Union, List
 
 from openpiv import smoothn
 from openpiv import validation, filters, tools, scaling, preprocess
 from openpiv.pyprocess import extended_search_area_piv, get_rect_coordinates, \
     get_field_shape
 from openpiv.tools import Multiprocesser, display_vector_field, transform_coordinates
+
+
+def __literal_eval_dict__(d):
+    from ast import literal_eval
+    new_dict = d.copy()
+    for k, v in d.items():
+        if k == 'filepath_images':
+            new_dict[k] = pathlib.Path(v)
+        else:
+            try:
+                new_dict[k] = literal_eval(v)
+            except Exception as e:
+                if v == 'None':
+                    new_dict[k] = None
+                # print(f'Could not evaluate value: {v}. Returning as string.')
+    return new_dict
 
 
 @dataclass
@@ -162,6 +177,35 @@ class PIVSettings:
     invert: bool = False  # for the test_invert
 
     fmt: str = "%.4e"
+
+    @staticmethod
+    def load(filename):
+        from configparser import ConfigParser
+
+        filename = pathlib.Path(filename)
+        if filename is not None:
+            _cfg = ConfigParser()
+            _cfg.optionxform = str
+            _cfg.read(filename)
+            param_dict = {}
+            if len(list(_cfg.sections())) == 1:
+                for s in _cfg.sections():
+                    param_dict = __literal_eval_dict__(dict(_cfg[s]))
+            else:
+                for s in _cfg.sections():
+                    param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
+        s = PIVSettings()
+        for k, v in param_dict.items():
+            s.__dict__[k] = v
+        return s
+
+    def save(self, filename):
+        """Save parameter dictionary to file"""
+        with open(filename, 'w') as f:
+            f.write(f'[openpiv_ext parameter]')
+            for k, v in self.__dict__.items():
+                line = f'\n{k}={v}'
+                f.write(line.replace('%', '%%'))
 
 
 def prepare_images(
