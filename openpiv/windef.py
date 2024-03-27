@@ -65,7 +65,7 @@ class PIVSettings:
     # average mask is applied to both A, B, but it's varying
     # for the frames sequence
     #: None for no masking
-    #: 'edges' for edges masking, 
+    #: 'edges' for edges masking,
     #: 'intensity' for intensity masking
     dynamic_masking_method: Optional[str] = None  # ['edge','intensity']
     dynamic_masking_threshold: float = 0.005
@@ -106,9 +106,9 @@ class PIVSettings:
 
     # Signal to noise ratio:
     # we can decide to estimate it or not at every vector position
-    # we can decided if we use it for validation or only store it for 
+    # we can decided if we use it for validation or only store it for
     # later post-processing
-    # plus we need some parameters for threshold validation and for the 
+    # plus we need some parameters for threshold validation and for the
     # calculations:
 
     sig2noise_method: Optional[str] = "peak2mean"  # or "peak2peak" or "None"
@@ -179,33 +179,32 @@ class PIVSettings:
     fmt: str = "%.4e"
 
     @staticmethod
-    def load(filename):
-        from configparser import ConfigParser
-
-        filename = pathlib.Path(filename)
-        if filename is not None:
-            _cfg = ConfigParser()
-            _cfg.optionxform = str
-            _cfg.read(filename)
-            param_dict = {}
-            if len(list(_cfg.sections())) == 1:
-                for s in _cfg.sections():
-                    param_dict = __literal_eval_dict__(dict(_cfg[s]))
-            else:
-                for s in _cfg.sections():
-                    param_dict[s.strip('-').strip(' ')] = dict(_cfg[s])
+    def load(filename) -> "PIVSettings":
+        """load yaml file and return PIVSettings object"""
+        import yaml
+        with open(filename) as f:
+            yaml_dict = yaml.safe_load(f)
         s = PIVSettings()
-        for k, v in param_dict.items():
+        for k, v in yaml_dict.items():
             s.__dict__[k] = v
         return s
 
     def save(self, filename):
         """Save parameter dictionary to file"""
+
+        yaml_dict = dict(self.__dict__.items())
+        for k, v in yaml_dict.items():
+            if isinstance(v, pathlib.Path):
+                yaml_dict[k] = str(v)
+
         with open(filename, 'w') as f:
-            f.write(f'[openpiv_ext parameter]')
-            for k, v in self.__dict__.items():
-                line = f'\n{k}={v}'
-                f.write(line.replace('%', '%%'))
+            import yaml
+            yaml.safe_dump(yaml_dict, f)
+
+
+def load_settings(filename) -> 'PIVSettings':
+    """Load settings from a file"""
+    return PIVSettings.load(filename)
 
 
 def prepare_images(
@@ -218,7 +217,7 @@ def prepare_images(
     Args:
         file_a (pathlib.Path): filename of frame A
         file_b (pathlib.Path): filename of frame B
-        settings (_type_): windef.Settings() 
+        settings (_type_): windef.Settings()
     """
     image_mask = None
 
@@ -742,7 +741,7 @@ def first_pass(frame_a, frame_b, settings):
 
     v : 2d np.array
         array containing the u displacement for every interrogation window
-    
+
     s2n: 2d np.array of the signal to noise ratio
 
     """
@@ -1064,7 +1063,7 @@ def simple_multipass(
     flags = validation.typical_validation(u, v, s2n, settings)
     u, v = filters.replace_outliers(u, v, flags)
 
-    # multipass 
+    # multipass
     for i in range(1, settings.num_iterations):
         x, y, u, v, grid_mask, flags, s2n = multipass_img_deform(
             frame_a,
