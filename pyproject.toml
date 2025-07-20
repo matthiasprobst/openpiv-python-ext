@@ -41,6 +41,16 @@ natsort = "^8.4.0"
 tqdm = "^4.66.1"
 importlib_resources = "5.12.0"
 
+
+[tool.poetry.group.metadata]
+optional = true
+
+[tool.poetry.group.metadata.dependencies]
+pivmetalib = ">=1.5.1.2"
+ssnolib = ">=2.0.0.1"
+ontolutils = ">=0.17.0"
+
+
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.3"
 

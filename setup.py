@@ -1,7 +1,6 @@
 from os import path
 from setuptools import setup, find_packages
 
-
 # read the contents of your README file
 this_directory = path.abspath(path.dirname(__file__))
 # with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
@@ -26,9 +25,12 @@ setup(
         'scipy',
         'natsort',
         'tqdm',
-        'importlib_resources'
+        'importlib_resources',
+        'pivmetalib>=2.0.0.2'
     ],
-    extras_require={"tests": ["pytest"]},
+    extras_require={"tests": ["pytest"],
+                    "metadata": ["pivmetalib>=1.5.1.2", "ssnolib>=2.0.0.1", "ontolutils>=0.17.0"]
+                    },
     classifiers=[
         # PyPI-specific version type. The number specified here is a magic
         # constant
