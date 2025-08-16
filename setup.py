@@ -25,11 +25,10 @@ setup(
         'scipy',
         'natsort',
         'tqdm',
-        'importlib_resources',
-        'pivmetalib>=2.0.0.2'
+        'importlib_resources'
     ],
     extras_require={"tests": ["pytest"],
-                    "metadata": ["pivmetalib>=1.5.1.2", "ssnolib>=2.0.0.1", "ontolutils>=0.17.0"]
+                    "metadata": ["pivmetalib>=2.0.0.2", "ontolutils>=0.19.4"]
                     },
     classifiers=[
         # PyPI-specific version type. The number specified here is a magic

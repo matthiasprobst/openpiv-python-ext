@@ -8,7 +8,11 @@ from openpiv import windef, metadata
 def test_save_metadata():
     settings = windef.PIVSettings()
 
-    meta_filename = metadata.save_metadata(settings, 'test_metadata.ttl')
+    meta_filename = metadata.save_metadata(
+        settings,
+        'test_metadata.ttl',
+        base_uri=" https://doi.org/10.5281/zenodo.12345678"
+    )
     assert pathlib.Path(meta_filename).exists()
     g = rdflib.Graph()
     g.parse(source=meta_filename, format='turtle')
